@@ -2,43 +2,51 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    protected $primaryKey = 'user_id';
+
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'username', 'password_hash', 'email',
+        'contact_number', 'address', 'role',
+        'is_active', 'is_approved',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password_hash', 'remember_token'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
+        'is_approved' => 'boolean',
     ];
+
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
+
+    public function farmerProfile()
+    {
+        return $this->hasOne(FarmerProfile::class, 'user_id', 'user_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'customer_id', 'user_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'customer_id', 'user_id');
+    }
+
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class, 'customer_id', 'user_id');
+    }
 }

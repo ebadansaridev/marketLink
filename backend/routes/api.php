@@ -1,19 +1,79 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FarmerController;
+use App\Http\Controllers\Api\MarketController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ReviewController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+// Public
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::get('/markets', [MarketController::class, 'index']);
+Route::get('/markets/nearby', [MarketController::class, 'nearby']);
+Route::get('/markets/{id}', [MarketController::class, 'show']);
+
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+
+Route::get('/farmers', [FarmerController::class, 'index']);
+Route::get('/farmers/{id}', [FarmerController::class, 'show']);
+
+Route::get('/products/{id}/reviews', [ReviewController::class, 'productReviews']);
+Route::get('/farmers/{id}/reviews', [ReviewController::class, 'farmerReviews']);
+
+// Authenticated
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/auth/profile', [AuthController::class, 'profile']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    // Favorites
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
+
+    // Reviews
+    Route::post('/reviews', [ReviewController::class, 'store']);
+
+    // Customer Orders
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::patch('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
+    // Farmer
+    Route::middleware('role:farmer')->group(function () {
+        Route::get('/farmer/dashboard', [FarmerController::class, 'dashboard']);
+        Route::put('/farmer/profile', [FarmerController::class, 'updateProfile']);
+
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{id}', [ProductController::class, 'update']);
+        Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+        Route::patch('/products/{id}/sold-out', [ProductController::class, 'markSoldOut']);
+
+        Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+        Route::post('/reviews/{id}/reply', [ReviewController::class, 'reply']);
+    });
+
+    // Admin
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        Route::get('/users', [AdminController::class, 'users']);
+        Route::patch('/users/{id}/approve', [AdminController::class, 'approveFarmer']);
+        Route::patch('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus']);
+        Route::delete('/reviews/{id}', [AdminController::class, 'deleteReview']);
+        Route::get('/reports', [AdminController::class, 'reports']);
+
+        Route::get('/categories', [AdminController::class, 'categories']);
+        Route::post('/categories', [AdminController::class, 'storeCategory']);
+        Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory']);
+
+        Route::post('/markets', [MarketController::class, 'store']);
+        Route::put('/markets/{id}', [MarketController::class, 'update']);
+        Route::delete('/markets/{id}', [MarketController::class, 'destroy']);
+    });
 });

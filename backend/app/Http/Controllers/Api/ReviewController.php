@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Repositories\Contracts\ReviewRepositoryInterface;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class ReviewController extends Controller
+{
+    public function __construct(
+        protected ReviewRepositoryInterface $reviewRepo
+    ) {}
+
+    public function productReviews(int $productId): JsonResponse
+    {
+        return response()->json($this->reviewRepo->getProductReviews($productId));
+    }
+
+    public function farmerReviews(int $farmerId): JsonResponse
+    {
+        return response()->json($this->reviewRepo->getFarmerReviews($farmerId));
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'product_id' => 'nullable|exists:products,product_id',
+            'farmer_id'  => 'nullable|exists:farmer_profiles,farmer_id',
+            'rating'     => 'required|integer|min:1|max:5',
+            'comment'    => 'nullable|string',
+        ]);
+
+        if ($request->user()->role !== 'customer') {
+            return response()->json(['message' => 'Only customers can review'], 403);
+        }
+
+        $data['customer_id'] = $request->user()->user_id;
+        $review = $this->reviewRepo->create($data);
+
+        return response()->json(['message' => 'Review added', 'review' => $review], 201);
+    }
+
+    public function reply(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['reply' => 'required|string']);
+
+        if ($request->user()->role !== 'farmer') {
+            return response()->json(['message' => 'Only farmers can reply'], 403);
+        }
+
+        $review = $this->reviewRepo->addFarmerReply($id, $request->reply);
+        return response()->json(['message' => 'Reply added', 'review' => $review]);
+    }
+}
